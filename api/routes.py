@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Response
 
 from models.request_models import RequestBook as Request_Book
-from models.request_models import ResponseBook
+from models.request_models import ResponseBook, PutResponseBook, PutRequestBook
 from models.db_models import Book as DB_Book
 
 from db.database import get_db
@@ -66,16 +66,18 @@ def get_books(
 @router.put('/book/{book_id}')
 def change_book(
         book_id,
-        new_book_data: Request_Book,
+        new_book_data: PutRequestBook,
         data_base: Session = Depends(get_db)
 ):
     data_book = data_base.query(DB_Book).get(book_id)
     if data_book is not None:
-        data_base.query(DB_Book).filter(DB_Book.id == book_id).update(new_book_data.dict())
+        data_base.query(DB_Book).\
+            filter(DB_Book.id == book_id).\
+            update({k: v for k, v in new_book_data.dict().items() if v is not None})
         data_base.commit()
         data_book = data_base.query(DB_Book).get(book_id)
         data_base.flush()
-        response_book = ResponseBook(**data_book.__dict__)
+        response_book = PutResponseBook(**data_book.__dict__)
         return JSONResponse(status_code=200, content={
             **response_book.dict()
         })
